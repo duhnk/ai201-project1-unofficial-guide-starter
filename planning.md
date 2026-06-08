@@ -10,7 +10,7 @@
 ## Domain
 
 <!-- What domain did you choose? Why is this knowledge valuable and hard to find through official channels? -->
-
+Cities and simple facts about them
 ---
 
 ## Documents
@@ -20,16 +20,16 @@
 
 | # | Source | Description | URL or location |
 |---|--------|-------------|-----------------|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
-| 4 | | | |
-| 5 | | | |
-| 6 | | | |
-| 7 | | | |
-| 8 | | | |
-| 9 | | | |
-| 10 | | | |
+| 1 | dr5hn Countries-States-Cities Database| Toronto |https://github.com/dr5hn/countries-states-cities-database |
+| 2 | SimpleMaps Free World Cities Database| Tokyo| https://simplemaps.com/data/world-cities|
+| 3 | Kaggle Countries States Cities Dataset| Paris| https://www.kaggle.com/datasets/max-mind/world-cities-database|
+| 4 | GitHub Datasets World Cities|Sydney | https://github.com/datasets/world-cities|
+| 5 | JSONLint World Countries Dataset| Brazil| https://jsonlint.com/datasets/countries|
+| 6 | Google Canonical Countries CSV| The United Kingdom|https://developers.google.com/public-data/docs/canonical/countries_csv |
+| 7 | GeoNames REST Web Services| Cairo| https://www.geonames.org/export/web-services.html|
+| 8 | Back4app Database Hub|Nairobi | https://www.back4app.com/database/back4app/list-of-all-continents-countries-cities|
+| 9 | GeoDB Cities API|Mumbai | https://github.com/topics/cities-database|
+| 10 | Wikipedia & Wikidata Text Dumps| Berlin| https://en.wikipedia.org/wiki/Berlin|
 
 ---
 
@@ -40,11 +40,11 @@
      numbers fit the structure of your documents.
      A review-heavy corpus warrants different chunking than a long FAQ. -->
 
-**Chunk size:**
+**Chunk size:** One chunk = one whole document (~512 characters max). Each source file is a single, self-contained description of one city (header + metadata line + a 2–4 sentence paragraph, ~300–400 chars total), so I keep the entire document together as one chunk rather than splitting it.
 
-**Overlap:**
+**Overlap:** 0 characters. Because every document is short and each chunk already holds a complete, standalone fact about one city, there is no key fact that spans a chunk boundary — so overlap would only duplicate content and waste embedding space.
 
-**Reasoning:**
+**Reasoning:** My documents are short factual blurbs, not long guides, so the chunking question is really "split or don't split." A fixed small character count (e.g. 200 chars) would cut a single city's description in half — separating "Tokyo is the capital of Japan" from "...population of approximately 37,732,000" — and neither half would answer a population query on its own. A whole-document chunk keeps the city name, its attributes, and its source/metadata together so every retrieved chunk is self-sufficient and carries attribution. If chunks were too small I'd see retrieval return fragments missing the city name or the answer value; too large isn't a risk here since no document exceeds a few sentences. The ~512-char ceiling is just a guard for any longer source (e.g. the Wikipedia/Berlin entry) so it still fits comfortably in one chunk.
 
 ---
 
@@ -56,11 +56,13 @@
      would you weigh in choosing a different embedding model — context length, multilingual
      support, accuracy on domain-specific text, latency? -->
 
-**Embedding model:**
+**Embedding model:** `all-MiniLM-L6-v2` via `sentence-transformers`. It produces 384-dimensional embeddings, is fast and lightweight enough to run locally with no API cost, and performs well on the short, single-sentence-style text that makes up my corpus.
 
-**Top-k:**
+**Top-k:** 3. Each document is a complete fact about one city, so the answer to a city-specific question (e.g. "What is Tokyo's population?") usually lives in a single chunk. Retrieving 3 gives the LLM the best match plus two backups in case the query is phrased ambiguously, without flooding the prompt with unrelated cities. Too few (k=1) risks missing the right document if the top match is wrong; too many (k=8+) pulls in irrelevant cities that can distract the model and dilute the context.
 
-**Production tradeoff reflection:**
+Semantic search works here even without shared words because the embedding model maps meaning, not exact tokens — so a query like "How many people live in Tokyo?" lands near a chunk that says "population of approximately 37,732,000," even though "how many people" never appears in the text.
+
+**Production tradeoff reflection:** If cost weren't a constraint and this served real users, I'd weigh: (1) **multilingual support** — city/place data is global, so a multilingual model (e.g. `paraphrase-multilingual-MiniLM-L12-v2` or a hosted OpenAI/Cohere embedding) would let users query in their own language and match place names with non-Latin scripts; (2) **accuracy on domain-specific text** — a larger model like `all-mpnet-base-v2` (768-dim) gives better retrieval accuracy on subtle distinctions (capital vs. primary city, ISO codes); (3) **context length** — not a real concern for these short docs, but matters if I later ingest full Wikipedia articles; and (4) **latency** — bigger models and hosted APIs add per-query latency, so for an interactive app I'd balance accuracy against keeping responses snappy. For this project, MiniLM-L6-v2 is the right local default; mpnet or a hosted multilingual model would be the upgrade path.
 
 ---
 

@@ -1,0 +1,6 @@
+Source: Back4app Database Hub
+
+Metadata: {"source_type": "graphql_api_hub", "continent_code": "AF"}
+
+Nairobi is the capital city of Kenya, located on the continent of Africa. In cloud database schemas, 
+it is explicitly indexed via relational object identifiers that link the city directly to its parent country object.
